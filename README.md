@@ -95,6 +95,11 @@ Then run:
 SELECT * FROM todos;
 ```
 
+To reset the table, run:
+```sql
+TRUNCATE TABLE todos;
+```
+
 ---
 
 ## Monitoring – Prometheus & Grafana
@@ -139,7 +144,87 @@ password: admin
 
 1. Log in to Grafana
 2. Add Prometheus as a data source
-
     * URL: `http://prometheus:9090`
-3. Import or create dashboards using Prometheus metrics (JVM, HTTP, custom metrics, etc.)
+3. Import the Dashboard.
+```json
+{
+  "title": "Supervision - Observable Dashboard",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Requests per second",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(http_server_requests_seconds_count[1m])"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Average response time (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1000 * (rate(http_server_requests_seconds_sum[1m]) / rate(http_server_requests_seconds_count[1m]))"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "CPU usage",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_cpu_usage"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Heap memory used (MB)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "jvm_memory_used_bytes{area=\"heap\"} / 1024 / 1024"
+        }
+      ]
+    }
+  ]
+}
+```
 
+### What the Dashboard Shows
+
+The dashboard contains 4 key metrics:
+
+* **Requests per second (RPS)** – How many HTTP requests the backend handles per second.
+* **Average response time (ms)** – How long the API takes to respond.
+* **CPU usage** – How much CPU the JVM process is using (0 to 1 = 0% to 100%).
+* **Heap memory (MB)** – Java heap memory currently used.
+
+During a JMeter load test:
+
+* If RPS increases and latency stays stable → the system is healthy.
+* If latency increases and RPS stops rising → the backend is saturating.
+* If CPU approaches 1.0 → CPU is the bottleneck.
+* If heap continuously grows → possible memory pressure.
+
+### Run the JMeter load test
+
+```bash
+jmeter -n -t test-plan.jmx -l results.jtl
+```
