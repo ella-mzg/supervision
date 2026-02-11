@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
@@ -138,25 +138,46 @@
         align-items: center;
       }
 
-      .filters {
-        display: inline-flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      .filters button {
-        font-size: 0.85rem;
-        padding: 8px 12px;
-      }
-
-      .filters button.active {
-        background: var(--accent-2);
-        color: #f8faf9;
-      }
-
       .stats {
         color: var(--muted);
         font-size: 0.95rem;
+      }
+
+      .progress {
+        width: 100%;
+        height: 14px;
+        border-radius: 999px;
+        background: #efe4d2;
+        overflow: hidden;
+        margin-top: 14px;
+        border: 1px solid var(--border);
+      }
+
+      .progress > div {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        transition: width 200ms ease;
+      }
+
+      .actions {
+        display: grid;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .actions form {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+      }
+
+      .actions input[type="number"] {
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        font-size: 1rem;
+        background: #fffdf9;
       }
 
       .status {
@@ -167,41 +188,6 @@
 
       .status.error {
         color: #a12816;
-      }
-
-      ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: grid;
-        gap: 12px;
-      }
-
-      .todo {
-        display: grid;
-        grid-template-columns: auto 1fr auto auto;
-        gap: 12px;
-        align-items: center;
-        padding: 14px 16px;
-        border-radius: 14px;
-        border: 1px solid var(--border);
-        background: #fffdf9;
-        animation: fadeUp 420ms ease both;
-        animation-delay: var(--stagger, 0ms);
-      }
-
-      .todo.done {
-        background: #f3f0ea;
-        color: #6d5a4b;
-        text-decoration: line-through;
-        text-decoration-thickness: 2px;
-      }
-
-      .title[contenteditable="true"] {
-        padding: 6px 8px;
-        border-radius: 8px;
-        outline: 1px dashed rgba(47, 111, 115, 0.35);
-        background: rgba(47, 111, 115, 0.08);
       }
 
       .empty {
@@ -239,12 +225,8 @@
           padding: 24px;
         }
 
-        .todo {
-          grid-template-columns: auto 1fr;
-        }
-
-        .todo button {
-          grid-column: span 2;
+        .content {
+          padding: 24px;
         }
       }
     </style>
@@ -257,50 +239,49 @@
       </header>
       <section class="content">
         <div class="panel">
-          <form id="todo-form">
-            <input
-              id="todo-input"
-              type="text"
-              placeholder="Ajouter une nouvelle tache..."
-              autocomplete="off"
-              required
-            />
-            <button class="primary" type="submit">Ajouter</button>
-          </form>
           <p class="status" id="status"></p>
-        </div>
-        <div class="panel">
-          <div class="toolbar">
-            <div class="filters" id="filters">
-              <button class="active" data-filter="all" type="button">Tous</button>
-              <button data-filter="open" type="button">Ouverts</button>
-              <button data-filter="done" type="button">Termines</button>
-            </div>
-            <div class="stats" id="stats">Chargement...</div>
+          <div class="stats" id="stats">Rafraichissez la page pour mettre a jour.</div>
+          <div class="progress"><div id="progress-bar"></div></div>
+          <div class="actions">
+            <form id="create-form">
+              <input
+                id="todo-input"
+                type="text"
+                placeholder="Ajouter une nouvelle tache..."
+                autocomplete="off"
+                required
+              />
+              <button class="primary" type="submit">Ajouter</button>
+            </form>
+            <form id="delete-form">
+              <input
+                id="delete-id"
+                type="number"
+                min="1"
+                placeholder="ID a supprimer"
+                required
+              />
+              <button class="danger" type="submit">Supprimer</button>
+            </form>
           </div>
-        </div>
-        <div class="panel">
-          <ul id="todo-list"></ul>
-          <p class="empty" id="empty-state" hidden>Rien a faire pour le moment.</p>
+          <p class="empty" id="empty-state" hidden>Aucune donnee pour le moment.</p>
         </div>
       </section>
     </main>
 
     <script>
       const apiBase = "/api/todos";
-      const state = {
-        todos: [],
-        filter: "all",
-      };
 
+      const targetCount = 200000;
       const elements = {
-        list: document.getElementById("todo-list"),
-        form: document.getElementById("todo-form"),
-        input: document.getElementById("todo-input"),
         status: document.getElementById("status"),
         stats: document.getElementById("stats"),
-        filters: document.getElementById("filters"),
         empty: document.getElementById("empty-state"),
+        progress: document.getElementById("progress-bar"),
+        createForm: document.getElementById("create-form"),
+        createInput: document.getElementById("todo-input"),
+        deleteForm: document.getElementById("delete-form"),
+        deleteInput: document.getElementById("delete-id"),
       };
 
       const setStatus = (message, type = "") => {
@@ -323,11 +304,15 @@
         return response.json();
       };
 
-      const loadTodos = async () => {
+      const updateCount = async () => {
         try {
+          setStatus("Chargement...");
           const data = await request(apiBase);
-          state.todos = data;
-          render();
+          const total = Array.isArray(data) ? data.length : 0;
+          const progress = Math.min(100, Math.round((total / targetCount) * 100));
+          elements.stats.textContent = `Nombre de lignes: ${total} / ${targetCount} (${progress}%)`;
+          elements.progress.style.width = `${progress}%`;
+          elements.empty.hidden = total > 0;
           setStatus("");
         } catch (error) {
           setStatus(error.message, "error");
@@ -335,155 +320,46 @@
       };
 
       const createTodo = async (title) => {
-        const created = await request(apiBase, {
+        await request(apiBase, {
           method: "POST",
           body: JSON.stringify({ title }),
         });
-        state.todos.unshift(created);
-        render();
-      };
-
-      const updateTodo = async (id, payload) => {
-        const updated = await request(`${apiBase}/${id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
-        state.todos = state.todos.map((todo) => (todo.id === id ? updated : todo));
-        render();
+        await updateCount();
       };
 
       const deleteTodo = async (id) => {
         await request(`${apiBase}/${id}`, { method: "DELETE" });
-        state.todos = state.todos.filter((todo) => todo.id !== id);
-        render();
+        await updateCount();
       };
 
-      const setFilter = (filter) => {
-        state.filter = filter;
-        [...elements.filters.querySelectorAll("button")].forEach((button) => {
-          button.classList.toggle("active", button.dataset.filter === filter);
-        });
-        render();
-      };
-
-      const renderStats = (visible) => {
-        const total = state.todos.length;
-        const done = state.todos.filter((todo) => todo.done).length;
-        const open = total - done;
-        elements.stats.textContent = `${total} total · ${open} ouverts · ${done} termines`;
-        elements.empty.hidden = visible.length > 0;
-      };
-
-      const render = () => {
-        const filtered = state.todos.filter((todo) => {
-          if (state.filter === "done") return todo.done;
-          if (state.filter === "open") return !todo.done;
-          return true;
-        });
-
-        elements.list.innerHTML = "";
-        filtered.forEach((todo, index) => {
-          const item = document.createElement("li");
-          item.className = `todo ${todo.done ? "done" : ""}`;
-          item.style.setProperty("--stagger", `${index * 45}ms`);
-
-          const checkbox = document.createElement("input");
-          checkbox.type = "checkbox";
-          checkbox.checked = todo.done;
-          checkbox.addEventListener("change", () =>
-            updateTodo(todo.id, { done: checkbox.checked })
-          );
-
-          const title = document.createElement("span");
-          title.className = "title";
-          title.textContent = todo.title;
-
-          const edit = document.createElement("button");
-          edit.className = "ghost";
-          edit.type = "button";
-          edit.textContent = "Modifier";
-
-          const remove = document.createElement("button");
-          remove.className = "danger";
-          remove.type = "button";
-          remove.textContent = "Supprimer";
-
-          edit.addEventListener("click", () => {
-            const original = title.textContent;
-            title.contentEditable = "true";
-            title.focus();
-            const range = document.createRange();
-            range.selectNodeContents(title);
-            range.collapse(false);
-            const selection = window.getSelection();
-            selection.removeAllRanges();
-            selection.addRange(range);
-
-            const stopEditing = async (save) => {
-              title.contentEditable = "false";
-              title.removeEventListener("blur", onBlur);
-              title.removeEventListener("keydown", onKeyDown);
-              if (save) {
-                const next = title.textContent.trim();
-                if (!next) {
-                  title.textContent = original;
-                  return;
-                }
-                if (next !== original) {
-                  await updateTodo(todo.id, { title: next });
-                }
-              } else {
-                title.textContent = original;
-              }
-            };
-
-            const onBlur = () => stopEditing(true);
-            const onKeyDown = (event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                stopEditing(true);
-              }
-              if (event.key === "Escape") {
-                event.preventDefault();
-                stopEditing(false);
-              }
-            };
-
-            title.addEventListener("blur", onBlur, { once: true });
-            title.addEventListener("keydown", onKeyDown);
-          });
-
-          remove.addEventListener("click", () => deleteTodo(todo.id));
-
-          item.append(checkbox, title, edit, remove);
-          elements.list.appendChild(item);
-        });
-
-        renderStats(filtered);
-      };
-
-      elements.form.addEventListener("submit", async (event) => {
+      elements.createForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        const value = elements.input.value.trim();
-        if (!value) {
-          return;
-        }
+        const value = elements.createInput.value.trim();
+        if (!value) return;
         try {
           await createTodo(value);
-          elements.input.value = "";
+          elements.createInput.value = "";
           setStatus("");
         } catch (error) {
           setStatus(error.message, "error");
         }
       });
 
-      elements.filters.addEventListener("click", (event) => {
-        if (event.target.tagName === "BUTTON") {
-          setFilter(event.target.dataset.filter);
+      elements.deleteForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const value = Number(elements.deleteInput.value);
+        if (!value) return;
+        try {
+          await deleteTodo(value);
+          elements.deleteInput.value = "";
+          setStatus("");
+        } catch (error) {
+          setStatus(error.message, "error");
         }
       });
 
-      loadTodos();
+      updateCount();
     </script>
   </body>
 </html>
+
