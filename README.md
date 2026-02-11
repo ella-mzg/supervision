@@ -19,6 +19,16 @@ java -version
 mvn -v
 docker -v
 ```
+---
+## Simple UI
+
+Once the app is running, open:
+
+```
+http://localhost:8080
+```
+
+This serves a lightweight HTML interface for listing, adding, editing, and completing todos.
 
 ---
 

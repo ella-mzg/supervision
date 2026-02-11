@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Supervision - Todos</title>
+    <style>
+      :root {
+        --ink: #1f1a14;
+        --muted: #6b5b4d;
+        --paper: #fbf8f2;
+        --accent: #ce5e2a;
+        --accent-2: #2f6f73;
+        --shadow: rgba(25, 19, 12, 0.18);
+        --border: rgba(40, 30, 20, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 10% 10%, rgba(206, 94, 42, 0.22), transparent 40%),
+          radial-gradient(circle at 80% 20%, rgba(47, 111, 115, 0.25), transparent 45%),
+          linear-gradient(120deg, #f5efe3 0%, #f0e4d2 45%, #f8f2e8 100%);
+        padding: 48px 20px 60px;
+      }
+
+      .app {
+        max-width: 920px;
+        margin: 0 auto;
+        background: rgba(251, 248, 242, 0.9);
+        border: 1px solid var(--border);
+        border-radius: 26px;
+        box-shadow: 0 24px 60px var(--shadow);
+        overflow: hidden;
+        backdrop-filter: blur(6px);
+        animation: rise 600ms ease-out;
+      }
+
+      header {
+        padding: 34px 40px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        border-bottom: 1px solid var(--border);
+        background:
+          linear-gradient(100deg, rgba(206, 94, 42, 0.12), rgba(47, 111, 115, 0.1)),
+          linear-gradient(0deg, rgba(251, 248, 242, 0.8), rgba(251, 248, 242, 0.8));
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 2.4vw, 2.6rem);
+        font-family: "Baskerville Old Face", "Baskerville", "Goudy Old Style", serif;
+        letter-spacing: 0.02em;
+      }
+
+      .tagline {
+        margin: 0;
+        color: var(--muted);
+        font-size: 1.05rem;
+      }
+
+      .content {
+        padding: 28px 40px 40px;
+        display: grid;
+        gap: 26px;
+      }
+
+      .panel {
+        background: var(--paper);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 22px 24px;
+        box-shadow: 0 16px 30px rgba(45, 32, 20, 0.08);
+      }
+
+      form {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      input[type="text"] {
+        flex: 1 1 280px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        font-size: 1rem;
+        background: #fffdf9;
+      }
+
+      input[type="text"]:focus {
+        outline: 2px solid rgba(206, 94, 42, 0.35);
+      }
+
+      button {
+        border: none;
+        padding: 11px 18px;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        cursor: pointer;
+        font-family: "Gill Sans", "Gill Sans MT", "Trebuchet MS", sans-serif;
+        transition: transform 120ms ease, box-shadow 120ms ease;
+      }
+
+      button.primary {
+        background: var(--accent);
+        color: #fffaf5;
+        box-shadow: 0 10px 20px rgba(206, 94, 42, 0.26);
+      }
+
+      button.ghost {
+        background: #f1e7d7;
+        color: var(--ink);
+      }
+
+      button.danger {
+        background: #f3d0c2;
+        color: #6d2311;
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .filters {
+        display: inline-flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .filters button {
+        font-size: 0.85rem;
+        padding: 8px 12px;
+      }
+
+      .filters button.active {
+        background: var(--accent-2);
+        color: #f8faf9;
+      }
+
+      .stats {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .status {
+        min-height: 22px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .status.error {
+        color: #a12816;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 12px;
+      }
+
+      .todo {
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        gap: 12px;
+        align-items: center;
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: #fffdf9;
+        animation: fadeUp 420ms ease both;
+        animation-delay: var(--stagger, 0ms);
+      }
+
+      .todo.done {
+        background: #f3f0ea;
+        color: #6d5a4b;
+        text-decoration: line-through;
+        text-decoration-thickness: 2px;
+      }
+
+      .title[contenteditable="true"] {
+        padding: 6px 8px;
+        border-radius: 8px;
+        outline: 1px dashed rgba(47, 111, 115, 0.35);
+        background: rgba(47, 111, 115, 0.08);
+      }
+
+      .empty {
+        text-align: center;
+        color: var(--muted);
+        padding: 22px 0 10px;
+        font-style: italic;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 720px) {
+        header,
+        .content {
+          padding: 24px;
+        }
+
+        .todo {
+          grid-template-columns: auto 1fr;
+        }
+
+        .todo button {
+          grid-column: span 2;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <h1>Supervision</h1>
+        <p class="tagline">Une interface simple pour piloter vos todos.</p>
+      </header>
+      <section class="content">
+        <div class="panel">
+          <form id="todo-form">
+            <input
+              id="todo-input"
+              type="text"
+              placeholder="Ajouter une nouvelle tache..."
+              autocomplete="off"
+              required
+            />
+            <button class="primary" type="submit">Ajouter</button>
+          </form>
+          <p class="status" id="status"></p>
+        </div>
+        <div class="panel">
+          <div class="toolbar">
+            <div class="filters" id="filters">
+              <button class="active" data-filter="all" type="button">Tous</button>
+              <button data-filter="open" type="button">Ouverts</button>
+              <button data-filter="done" type="button">Termines</button>
+            </div>
+            <div class="stats" id="stats">Chargement...</div>
+          </div>
+        </div>
+        <div class="panel">
+          <ul id="todo-list"></ul>
+          <p class="empty" id="empty-state" hidden>Rien a faire pour le moment.</p>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const apiBase = "/api/todos";
+      const state = {
+        todos: [],
+        filter: "all",
+      };
+
+      const elements = {
+        list: document.getElementById("todo-list"),
+        form: document.getElementById("todo-form"),
+        input: document.getElementById("todo-input"),
+        status: document.getElementById("status"),
+        stats: document.getElementById("stats"),
+        filters: document.getElementById("filters"),
+        empty: document.getElementById("empty-state"),
+      };
+
+      const setStatus = (message, type = "") => {
+        elements.status.textContent = message;
+        elements.status.className = `status ${type}`.trim();
+      };
+
+      const request = async (url, options = {}) => {
+        const response = await fetch(url, {
+          headers: { "Content-Type": "application/json" },
+          ...options,
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || `Erreur ${response.status}`);
+        }
+        if (response.status === 204) {
+          return null;
+        }
+        return response.json();
+      };
+
+      const loadTodos = async () => {
+        try {
+          const data = await request(apiBase);
+          state.todos = data;
+          render();
+          setStatus("");
+        } catch (error) {
+          setStatus(error.message, "error");
+        }
+      };
+
+      const createTodo = async (title) => {
+        const created = await request(apiBase, {
+          method: "POST",
+          body: JSON.stringify({ title }),
+        });
+        state.todos.unshift(created);
+        render();
+      };
+
+      const updateTodo = async (id, payload) => {
+        const updated = await request(`${apiBase}/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
+        state.todos = state.todos.map((todo) => (todo.id === id ? updated : todo));
+        render();
+      };
+
+      const deleteTodo = async (id) => {
+        await request(`${apiBase}/${id}`, { method: "DELETE" });
+        state.todos = state.todos.filter((todo) => todo.id !== id);
+        render();
+      };
+
+      const setFilter = (filter) => {
+        state.filter = filter;
+        [...elements.filters.querySelectorAll("button")].forEach((button) => {
+          button.classList.toggle("active", button.dataset.filter === filter);
+        });
+        render();
+      };
+
+      const renderStats = (visible) => {
+        const total = state.todos.length;
+        const done = state.todos.filter((todo) => todo.done).length;
+        const open = total - done;
+        elements.stats.textContent = `${total} total · ${open} ouverts · ${done} termines`;
+        elements.empty.hidden = visible.length > 0;
+      };
+
+      const render = () => {
+        const filtered = state.todos.filter((todo) => {
+          if (state.filter === "done") return todo.done;
+          if (state.filter === "open") return !todo.done;
+          return true;
+        });
+
+        elements.list.innerHTML = "";
+        filtered.forEach((todo, index) => {
+          const item = document.createElement("li");
+          item.className = `todo ${todo.done ? "done" : ""}`;
+          item.style.setProperty("--stagger", `${index * 45}ms`);
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = todo.done;
+          checkbox.addEventListener("change", () =>
+            updateTodo(todo.id, { done: checkbox.checked })
+          );
+
+          const title = document.createElement("span");
+          title.className = "title";
+          title.textContent = todo.title;
+
+          const edit = document.createElement("button");
+          edit.className = "ghost";
+          edit.type = "button";
+          edit.textContent = "Modifier";
+
+          const remove = document.createElement("button");
+          remove.className = "danger";
+          remove.type = "button";
+          remove.textContent = "Supprimer";
+
+          edit.addEventListener("click", () => {
+            const original = title.textContent;
+            title.contentEditable = "true";
+            title.focus();
+            const range = document.createRange();
+            range.selectNodeContents(title);
+            range.collapse(false);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            const stopEditing = async (save) => {
+              title.contentEditable = "false";
+              title.removeEventListener("blur", onBlur);
+              title.removeEventListener("keydown", onKeyDown);
+              if (save) {
+                const next = title.textContent.trim();
+                if (!next) {
+                  title.textContent = original;
+                  return;
+                }
+                if (next !== original) {
+                  await updateTodo(todo.id, { title: next });
+                }
+              } else {
+                title.textContent = original;
+              }
+            };
+
+            const onBlur = () => stopEditing(true);
+            const onKeyDown = (event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                stopEditing(true);
+              }
+              if (event.key === "Escape") {
+                event.preventDefault();
+                stopEditing(false);
+              }
+            };
+
+            title.addEventListener("blur", onBlur, { once: true });
+            title.addEventListener("keydown", onKeyDown);
+          });
+
+          remove.addEventListener("click", () => deleteTodo(todo.id));
+
+          item.append(checkbox, title, edit, remove);
+          elements.list.appendChild(item);
+        });
+
+        renderStats(filtered);
+      };
+
+      elements.form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const value = elements.input.value.trim();
+        if (!value) {
+          return;
+        }
+        try {
+          await createTodo(value);
+          elements.input.value = "";
+          setStatus("");
+        } catch (error) {
+          setStatus(error.message, "error");
+        }
+      });
+
+      elements.filters.addEventListener("click", (event) => {
+        if (event.target.tagName === "BUTTON") {
+          setFilter(event.target.dataset.filter);
+        }
+      });
+
+      loadTodos();
+    </script>
+  </body>
+</html>
