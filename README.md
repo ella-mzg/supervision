@@ -148,7 +148,7 @@ password: admin
 3. Import the Dashboard.
 ```json
 {
-  "title": "Supervision - Observable Dashboard",
+  "title": "Supervision - Dashboard",
   "timezone": "browser",
   "schemaVersion": 38,
   "version": 1,
@@ -207,7 +207,7 @@ password: admin
 }
 ```
 
-### What the Dashboard Shows
+#### What the Dashboard Shows
 
 The dashboard contains 4 key metrics:
 
@@ -216,12 +216,6 @@ The dashboard contains 4 key metrics:
 * **CPU usage** – How much CPU the JVM process is using (0 to 1 = 0% to 100%).
 * **Heap memory (MB)** – Java heap memory currently used.
 
-During a JMeter load test:
-
-* If RPS increases and latency stays stable → the system is healthy.
-* If latency increases and RPS stops rising → the backend is saturating.
-* If CPU approaches 1.0 → CPU is the bottleneck.
-* If heap continuously grows → possible memory pressure.
 
 ### Run the JMeter load test
 
